@@ -1,0 +1,1757 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hunter X - Space Zombie Shooter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Pengaturan Dasar & Font Sci-Fi */
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #050814;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: #ffffff;
+        }
+
+        .font-scifi {
+            font-family: 'Orbitron', sans-serif;
+        }
+
+        /* Kanvas Utama */
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+
+        /* Efek Cahaya Neon & Glassmorphism */
+        .glass-panel {
+            background: rgba(13, 20, 44, 0.78);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(56, 189, 248, 0.35);
+            box-shadow: 0 0 30px rgba(14, 165, 233, 0.25), inset 0 0 20px rgba(56, 189, 248, 0.1);
+        }
+
+        .neon-text-blue {
+            text-shadow: 0 0 10px rgba(56, 189, 248, 0.8), 0 0 25px rgba(14, 165, 233, 0.6);
+        }
+
+        .neon-text-green {
+            text-shadow: 0 0 10px rgba(74, 222, 128, 0.8), 0 0 20px rgba(34, 197, 94, 0.5);
+        }
+
+        .neon-text-red {
+            text-shadow: 0 0 10px rgba(248, 113, 113, 0.8), 0 0 20px rgba(239, 68, 68, 0.6);
+        }
+
+        /* Tombol Sci-Fi Interaktif */
+        .btn-scifi {
+            background: linear-gradient(135deg, #0284c7 0%, #38bdf8 50%, #0ea5e9 100%);
+            border: 2px solid #bae6fd;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.6), inset 0 2px 4px rgba(255, 255, 255, 0.6);
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            cursor: pointer;
+        }
+
+        .btn-scifi:hover {
+            transform: translateY(-2px) scale(1.04);
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.9), inset 0 2px 6px rgba(255, 255, 255, 0.8);
+        }
+
+        .btn-scifi:active {
+            transform: translateY(1px) scale(0.97);
+        }
+
+        /* Pilihan Mode Kesulitan */
+        .diff-btn {
+            transition: all 0.2s ease;
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            background: rgba(15, 23, 42, 0.6);
+        }
+
+        .diff-btn.active {
+            border-color: #38bdf8;
+            background: rgba(14, 165, 233, 0.25);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.4);
+            color: #ffffff;
+        }
+
+        /* Animasi Melayang untuk Judul */
+        @keyframes floatTitle {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+        .animate-float {
+            animation: floatTitle 3s ease-in-out infinite;
+        }
+
+        /* Animasi Banner Level Up */
+        @keyframes levelBannerPop {
+            0% { transform: scale(0.5); opacity: 0; }
+            20% { transform: scale(1.1); opacity: 1; }
+            80% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(1.2); opacity: 0; }
+        }
+        .animate-level-banner {
+            animation: levelBannerPop 2.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+    </style>
+</head>
+<body class="relative w-full h-full overflow-hidden">
+
+    <!-- Kanvas Game Utama -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- HUD (Heads-Up Display) Saat Bermain -->
+    <div id="hudContainer" class="hidden fixed inset-0 pointer-events-none z-10 p-3 sm:p-5 flex flex-col justify-between">
+        <!-- Baris Atas HUD -->
+        <div class="flex flex-wrap items-start justify-between gap-2">
+            <!-- Kiri: Nyawa (Health) & Power-up Aktif -->
+            <div class="flex flex-col gap-2">
+                <div class="glass-panel rounded-2xl px-3.5 py-2 sm:px-4 sm:py-2.5 flex items-center gap-3">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-rose-400 text-lg sm:text-xl">❤️</span>
+                        <span class="font-scifi text-xs sm:text-sm font-bold text-sky-200 tracking-wider">ENERGI</span>
+                    </div>
+                    <!-- Bar Nyawa Visual -->
+                    <div class="w-28 sm:w-40 h-3.5 sm:h-4 bg-slate-900/90 rounded-full overflow-hidden border border-slate-700 p-0.5">
+                        <div id="healthBarFill" class="h-full rounded-full bg-gradient-to-r from-rose-500 via-pink-500 to-emerald-400 transition-all duration-200" style="width: 100%;"></div>
+                    </div>
+                    <span id="healthText" class="font-scifi text-xs sm:text-sm font-bold text-white min-w-[36px] text-right">100</span>
+                </div>
+
+                <!-- Indikator Power-Up Aktif -->
+                <div id="activePowerups" class="flex flex-wrap gap-2"></div>
+            </div>
+
+            <!-- Tengah: Level & Sisa Zombie -->
+            <div class="glass-panel rounded-2xl px-4 py-2 sm:px-6 sm:py-2.5 flex items-center gap-4 sm:gap-6 mx-auto sm:mx-0">
+                <div class="text-center">
+                    <div class="text-[10px] sm:text-xs font-bold text-sky-300 uppercase tracking-widest">LEVEL</div>
+                    <div id="levelDisplay" class="font-scifi text-lg sm:text-2xl font-black text-white neon-text-blue">1</div>
+                </div>
+                <div class="h-7 w-[1px] bg-sky-500/30"></div>
+                <div class="text-center">
+                    <div class="text-[10px] sm:text-xs font-bold text-emerald-300 uppercase tracking-widest">ZOMBIE</div>
+                    <div id="zombieCountDisplay" class="font-scifi text-lg sm:text-2xl font-black text-emerald-400 neon-text-green">0</div>
+                </div>
+            </div>
+
+            <!-- Kanan: Skor & Tombol Suara -->
+            <div class="flex items-center gap-2 sm:gap-3 ml-auto sm:ml-0">
+                <div class="glass-panel rounded-2xl px-3.5 py-2 sm:px-5 sm:py-2.5 text-right">
+                    <div class="text-[10px] sm:text-xs font-bold text-amber-300 uppercase tracking-widest">SKOR</div>
+                    <div id="scoreDisplay" class="font-scifi text-lg sm:text-2xl font-black text-amber-400">0</div>
+                </div>
+
+                <!-- Tombol Mute / Unmute Suara (Pointer Events Aktif) -->
+                <button id="muteBtn" class="pointer-events-auto glass-panel hover:bg-sky-500/20 active:scale-95 transition rounded-2xl p-2.5 sm:p-3.5 flex items-center justify-center text-sky-300" title="Suara Efek Laser">
+                    <svg id="soundOnIcon" class="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+                    </svg>
+                    <svg id="soundOffIcon" class="w-5 h-5 sm:w-6 sm:h-6 hidden text-rose-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Banner Notifikasi Naik Level (Muncul Sementara di Tengah) -->
+        <div id="levelBanner" class="hidden self-center my-auto text-center pointer-events-none">
+            <div class="glass-panel rounded-3xl px-8 py-5 border-2 border-sky-400">
+                <div class="font-scifi text-sm sm:text-base font-bold text-sky-300 tracking-widest uppercase">SEKTOR AMAN!</div>
+                <div id="levelBannerText" class="font-scifi text-3xl sm:text-5xl font-black text-white neon-text-blue mt-1">LEVEL 2</div>
+                <div id="levelBannerSub" class="text-xs sm:text-sm text-emerald-300 font-semibold mt-1.5">Zombie lebih banyak mendekat!</div>
+            </div>
+        </div>
+
+        <!-- Petunjuk Kontrol Layar Sentuh (Hanya terlihat di layar kecil/sentuh) -->
+        <div id="touchHint" class="md:hidden text-center text-[11px] text-sky-200/70 bg-slate-900/50 rounded-full px-3 py-1 self-center mb-1">
+            Geser kiri untuk bergerak • Ketuk/Tahan kanan untuk menembak laser
+        </div>
+    </div>
+
+    <!-- Layar Mulai (Start Screen) -->
+    <div id="startScreen" class="fixed inset-0 z-20 flex items-center justify-center p-4 bg-slate-950/65 backdrop-blur-sm">
+        <div class="glass-panel rounded-3xl max-w-lg w-full p-6 sm:p-8 text-center relative overflow-hidden">
+            <!-- Dekorasi Sudut Sci-Fi -->
+            <div class="absolute top-0 left-0 w-16 h-16 border-t-4 border-l-4 border-sky-400 rounded-tl-3xl opacity-70"></div>
+            <div class="absolute bottom-0 right-0 w-16 h-16 border-b-4 border-r-4 border-sky-400 rounded-br-3xl opacity-70"></div>
+
+            <!-- Badge Luar Angkasa -->
+            <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-sky-500/20 border border-sky-400/40 text-sky-300 text-xs font-bold tracking-wider uppercase mb-3">
+                <span>🚀</span> MISI LUAR ANGKASA
+            </div>
+
+            <!-- Judul Utama -->
+            <h1 class="font-scifi text-4xl sm:text-6xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-sky-300 via-white to-cyan-400 neon-text-blue animate-float">
+                HUNTER X
+            </h1>
+            <p class="text-slate-300 text-sm sm:text-base mt-2 mb-5">
+                Basmi pasukan zombie luar angkasa dengan senjata laser futuristikmu!
+            </p>
+
+            <!-- Pilihan Tingkat Kesulitan -->
+            <div class="mb-5">
+                <div class="text-xs font-bold text-sky-300 uppercase tracking-wider mb-2">Pilih Tingkat Kesulitan</div>
+                <div class="grid grid-cols-3 gap-2">
+                    <button type="button" data-diff="easy" class="diff-btn rounded-xl py-2.5 px-2 text-xs sm:text-sm font-bold text-slate-300">
+                        🌟 Santai<br><span class="text-[10px] font-normal text-slate-400">Anak-anak</span>
+                    </button>
+                    <button type="button" data-diff="normal" class="diff-btn active rounded-xl py-2.5 px-2 text-xs sm:text-sm font-bold text-slate-300">
+                        ⚡ Normal<br><span class="text-[10px] font-normal text-slate-400">Standar</span>
+                    </button>
+                    <button type="button" data-diff="hard" class="diff-btn rounded-xl py-2.5 px-2 text-xs sm:text-sm font-bold text-slate-300">
+                        🔥 Tantangan<br><span class="text-[10px] font-normal text-slate-400">Pro Hunter</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Panduan Kontrol Singkat -->
+            <div class="bg-slate-900/75 border border-slate-700/80 rounded-2xl p-3.5 sm:p-4 mb-6 text-left grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-sky-500/20 border border-sky-400/30 flex items-center justify-center text-lg shrink-0">
+                        🕹️
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-white">Bergerak</div>
+                        <div class="text-[11px] text-slate-300">WASD / Tombol Panah / Geser Layar</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-cyan-500/20 border border-cyan-400/30 flex items-center justify-center text-lg shrink-0">
+                        🔫
+                    </div>
+                    <div>
+                        <div class="text-xs font-bold text-white">Tembak Laser</div>
+                        <div class="text-[11px] text-slate-300">Klik Mouse / Spasi / Sentuh Layar</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tombol Mulai Main -->
+            <button id="startBtn" class="btn-scifi w-full py-3.5 sm:py-4 rounded-2xl font-scifi text-lg sm:text-xl font-black text-slate-950 tracking-wider uppercase">
+                MULAI MAIN 🚀
+            </button>
+        </div>
+    </div>
+
+    <!-- Layar Game Over -->
+    <div id="gameOverScreen" class="hidden fixed inset-0 z-30 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
+        <div class="glass-panel rounded-3xl max-w-md w-full p-6 sm:p-8 text-center border-rose-500/40">
+            <div class="w-16 h-16 mx-auto mb-3 rounded-2xl bg-rose-500/20 border border-rose-400/40 flex items-center justify-center text-3xl">
+                🛸
+            </div>
+            <h2 class="font-scifi text-3xl sm:text-4xl font-black text-rose-400 neon-text-red tracking-wide">
+                MISI SELESAI
+            </h2>
+            <p class="text-slate-300 text-sm mt-1 mb-6">
+                Energi baju luar angkasamu habis!
+            </p>
+
+            <!-- Ringkasan Statistik -->
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <div class="bg-slate-900/80 border border-slate-700/80 rounded-2xl p-3.5">
+                    <div class="text-xs font-bold text-slate-400 uppercase">Skor Akhir</div>
+                    <div id="finalScore" class="font-scifi text-2xl sm:text-3xl font-black text-amber-400 mt-1">0</div>
+                </div>
+                <div class="bg-slate-900/80 border border-slate-700/80 rounded-2xl p-3.5">
+                    <div class="text-xs font-bold text-slate-400 uppercase">Level Tercapai</div>
+                    <div id="finalLevel" class="font-scifi text-2xl sm:text-3xl font-black text-sky-400 mt-1">1</div>
+                </div>
+            </div>
+
+            <div class="bg-slate-900/60 rounded-xl py-2 px-4 mb-6 text-xs text-slate-300 flex justify-between items-center">
+                <span>Total Zombie Dimusnahkan:</span>
+                <span id="finalKills" class="font-scifi font-bold text-emerald-400 text-sm">0</span>
+            </div>
+
+            <!-- Tombol Main Lagi -->
+            <button id="restartBtn" class="btn-scifi w-full py-3.5 sm:py-4 rounded-2xl font-scifi text-lg font-black text-slate-950 tracking-wider uppercase">
+                MAIN LAGI 🔄
+            </button>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * ============================================================================
+         * HUNTER X - SPACE ZOMBIE SHOOTER
+         * Game 2D Canvas dengan animasi karakter sci-fi, suara laser Web Audio API,
+         * sistem level progresif, power-up, dan dukungan kontrol PC & layar sentuh.
+         * ============================================================================
+         */
+
+        // ==========================================
+        // 1. SISTEM AUDIO LUAR ANGKASA (WEB AUDIO API)
+        // ==========================================
+        class SpaceAudio {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            // Inisialisasi AudioContext saat pertama kali ada interaksi pengguna
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) {
+                        this.ctx = new AudioContext();
+                    }
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            toggleMute() {
+                this.muted = !this.muted;
+                return this.muted;
+            }
+
+            // Efek suara tembakan laser sci-fi ("pew-pew" luar angkasa)
+            playLaser(isDual = false) {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = isDual ? 'sawtooth' : 'sine';
+                    // Frekuensi turun cepat menghasilkan efek laser khas sci-fi
+                    const startFreq = isDual ? 1350 : 1100;
+                    osc.frequency.setValueAtTime(startFreq, now);
+                    osc.frequency.exponentialRampToValueAtTime(160, now + 0.14);
+
+                    gain.gain.setValueAtTime(0.16, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(now);
+                    osc.stop(now + 0.15);
+                } catch (e) {}
+            }
+
+            // Efek suara mengenai zombie (hit ringan)
+            playHit() {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(280, now);
+                    osc.frequency.exponentialRampToValueAtTime(75, now + 0.08);
+
+                    gain.gain.setValueAtTime(0.14, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(now);
+                    osc.stop(now + 0.09);
+                } catch (e) {}
+            }
+
+            // Efek suara ledakan saat zombie musnah
+            playZombieDestroy() {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    // Noise buffer untuk suara ledakan energi
+                    const bufferSize = this.ctx.sampleRate * 0.22;
+                    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        data[i] = Math.random() * 2 - 1;
+                    }
+
+                    const noise = this.ctx.createBufferSource();
+                    noise.buffer = buffer;
+
+                    const filter = this.ctx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(900, now);
+                    filter.frequency.exponentialRampToValueAtTime(100, now + 0.22);
+
+                    const gain = this.ctx.createGain();
+                    gain.gain.setValueAtTime(0.22, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+
+                    noise.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    noise.start(now);
+                } catch (e) {}
+            }
+
+            // Efek suara mengambil Power-Up
+            playPowerup() {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                    notes.forEach((freq, i) => {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, now + i * 0.055);
+                        gain.gain.setValueAtTime(0.14, now + i * 0.055);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.055 + 0.15);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start(now + i * 0.055);
+                        osc.stop(now + i * 0.055 + 0.16);
+                    });
+                } catch (e) {}
+            }
+
+            // Fanfare naik level luar angkasa
+            playLevelUp() {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const melody = [440, 554.37, 659.25, 880]; // A4, C#5, E5, A5
+                    melody.forEach((freq, idx) => {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.09);
+                        gain.gain.setValueAtTime(0.18, now + idx * 0.09);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.09 + 0.3);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start(now + idx * 0.09);
+                        osc.stop(now + idx * 0.09 + 0.32);
+                    });
+                } catch (e) {}
+            }
+
+            // Efek suara Player terkena serangan
+            playPlayerHurt() {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(190, now);
+                    osc.frequency.linearRampToValueAtTime(65, now + 0.25);
+                    gain.gain.setValueAtTime(0.22, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.26);
+                } catch (e) {}
+            }
+
+            // Efek suara Game Over
+            playGameOver() {
+                if (this.muted || !this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const notes = [392.00, 349.23, 311.13, 261.63]; // G4, F4, Eb4, C4
+                    notes.forEach((freq, idx) => {
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(freq, now + idx * 0.18);
+                        gain.gain.setValueAtTime(0.16, now + idx * 0.18);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.18 + 0.35);
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start(now + idx * 0.18);
+                        osc.stop(now + idx * 0.18 + 0.36);
+                    });
+                } catch (e) {}
+            }
+        }
+
+        // ==========================================
+        // 2. INISIALISASI KANVAS & VARIABEL GLOBAL
+        // ==========================================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const audio = new SpaceAudio();
+
+        // Elemen UI
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const hudContainer = document.getElementById('hudContainer');
+        const healthBarFill = document.getElementById('healthBarFill');
+        const healthText = document.getElementById('healthText');
+        const levelDisplay = document.getElementById('levelDisplay');
+        const zombieCountDisplay = document.getElementById('zombieCountDisplay');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const activePowerupsEl = document.getElementById('activePowerups');
+        const levelBanner = document.getElementById('levelBanner');
+        const levelBannerText = document.getElementById('levelBannerText');
+        const levelBannerSub = document.getElementById('levelBannerSub');
+
+        // Pengaturan Tingkat Kesulitan
+        const DIFFICULTIES = {
+            easy:   { speedMult: 0.72, hpMult: 0.75, spawnMult: 0.8, playerHp: 120 },
+            normal: { speedMult: 1.0,  hpMult: 1.0,  spawnMult: 1.0, playerHp: 100 },
+            hard:   { speedMult: 1.32, hpMult: 1.35, spawnMult: 1.25, playerHp: 100 }
+        };
+        let selectedDifficulty = 'normal';
+
+        // Status Game
+        let gameState = 'MENU'; // 'MENU', 'PLAYING', 'GAMEOVER'
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        let lastTime = 0;
+        let screenShake = 0;
+
+        // Data Permainan
+        let score = 0;
+        let totalKills = 0;
+        let currentLevel = 1;
+        let zombiesToSpawnInLevel = 0;
+        let zombiesRemainingInLevel = 0;
+        let spawnTimer = 0;
+        let spawnInterval = 1.4;
+        let levelTransitionTimer = 0;
+
+        // Input Keyboard, Mouse, dan Sentuh
+        const keys = {};
+        const mouse = { x: width / 2, y: height / 2, isDown: false };
+
+        // Kontrol Sentuh Virtual (Joystick Kiri + Tembak Kanan)
+        const touchControls = {
+            moveTouchId: null,
+            moveOrigin: { x: 0, y: 0 },
+            moveCurrent: { x: 0, y: 0 },
+            moveVector: { x: 0, y: 0 },
+            shootTouchId: null,
+            isShooting: false
+        };
+
+        // Entitas Game
+        let stars = [];
+        let nebulae = [];
+        let player = null;
+        let lasers = [];
+        let zombies = [];
+        let particles = [];
+        let powerups = [];
+        let floatingTexts = [];
+
+        // ==========================================
+        // 3. RESIZE KANVAS & LATAR BELAKANG LUAR ANGKASA
+        // ==========================================
+        function resizeCanvas() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width;
+            canvas.height = height;
+            if (stars.length === 0) {
+                initSpaceBackground();
+            }
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        function initSpaceBackground() {
+            stars = [];
+            const starCount = Math.floor((width * height) / 7500);
+            for (let i = 0; i < starCount; i++) {
+                stars.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    size: Math.random() * 2.2 + 0.6,
+                    speed: Math.random() * 18 + 6,
+                    alpha: Math.random() * 0.7 + 0.3,
+                    twinkleSpeed: Math.random() * 3 + 1,
+                    phase: Math.random() * Math.PI * 2,
+                    color: Math.random() > 0.8 ? '#7dd3fc' : (Math.random() > 0.85 ? '#fde047' : '#ffffff')
+                });
+            }
+
+            nebulae = [
+                { x: width * 0.25, y: height * 0.3, r: 260, color: 'rgba(14, 165, 233, 0.08)' },
+                { x: width * 0.78, y: height * 0.68, r: 320, color: 'rgba(139, 92, 246, 0.08)' },
+                { x: width * 0.55, y: height * 0.2, r: 220, color: 'rgba(16, 185, 129, 0.05)' }
+            ];
+        }
+
+        // ==========================================
+        // 4. KELAS KARAKTER PLAYER (SPACE HUNTER)
+        // ==========================================
+        class Player {
+            constructor(maxHp) {
+                this.x = width / 2;
+                this.y = height / 2;
+                this.radius = 22;
+                this.speed = 275;
+                this.angle = 0;
+                this.maxHp = maxHp;
+                this.hp = maxHp;
+
+                // Animasi berjalan & efek
+                this.walkTime = 0;
+                this.isMoving = false;
+                this.recoil = 0;
+                this.invulnerableTimer = 0;
+
+                // Status Senjata & Power-Up
+                this.fireCooldown = 0;
+                this.baseFireRate = 0.21; // detik antar tembakan
+                this.dualLaserTimer = 0;
+                this.shieldTimer = 0;
+                this.rapidFireTimer = 0;
+            }
+
+            update(dt) {
+                // Kurangi timer cooldown & buff
+                if (this.fireCooldown > 0) this.fireCooldown -= dt;
+                if (this.recoil > 0) this.recoil = Math.max(0, this.recoil - dt * 35);
+                if (this.invulnerableTimer > 0) this.invulnerableTimer -= dt;
+                if (this.dualLaserTimer > 0) this.dualLaserTimer -= dt;
+                if (this.shieldTimer > 0) this.shieldTimer -= dt;
+                if (this.rapidFireTimer > 0) this.rapidFireTimer -= dt;
+
+                // Hitung arah gerakan dari keyboard atau joystick sentuh
+                let dx = 0;
+                let dy = 0;
+
+                if (keys['KeyW'] || keys['ArrowUp']) dy -= 1;
+                if (keys['KeyS'] || keys['ArrowDown']) dy += 1;
+                if (keys['KeyA'] || keys['ArrowLeft']) dx -= 1;
+                if (keys['KeyD'] || keys['ArrowRight']) dx += 1;
+
+                if (touchControls.moveTouchId !== null) {
+                    dx += touchControls.moveVector.x;
+                    dy += touchControls.moveVector.y;
+                }
+
+                // Normalisasi vektor gerak diagonal
+                const len = Math.hypot(dx, dy);
+                if (len > 0.05) {
+                    const normX = dx / Math.max(1, len);
+                    const normY = dy / Math.max(1, len);
+                    this.x += normX * this.speed * dt;
+                    this.y += normY * this.speed * dt;
+                    this.isMoving = true;
+                    this.walkTime += dt * 13;
+
+                    // Jejak partikel jetpack biru saat bergerak
+                    if (Math.random() < 0.55) {
+                        const backAngle = this.angle + Math.PI + (Math.random() - 0.5) * 0.5;
+                        particles.push(new Particle(
+                            this.x + Math.cos(backAngle) * 16,
+                            this.y + Math.sin(backAngle) * 16,
+                            Math.cos(backAngle) * (60 + Math.random() * 50),
+                            Math.sin(backAngle) * (60 + Math.random() * 50),
+                            '#38bdf8',
+                            Math.random() * 3.5 + 2,
+                            0.28
+                        ));
+                    }
+                } else {
+                    this.isMoving = false;
+                    this.walkTime = 0;
+                }
+
+                // Batasi player agar tetap berada di dalam arena layar
+                const margin = this.radius + 10;
+                this.x = Math.max(margin, Math.min(width - margin, this.x));
+                this.y = Math.max(margin + 55, Math.min(height - margin, this.y));
+
+                // Arahkan pandangan karakter ke kursor mouse / target sentuh
+                this.angle = Math.atan2(mouse.y - this.y, mouse.x - this.x);
+
+                // Menembak jika klik ditahan, spasi ditekan, atau tombol tembak sentuh aktif
+                if (mouse.isDown || keys['Space'] || touchControls.isShooting) {
+                    this.shoot();
+                }
+            }
+
+            shoot() {
+                if (this.fireCooldown > 0) return;
+
+                const currentFireRate = this.rapidFireTimer > 0 ? this.baseFireRate * 0.55 : this.baseFireRate;
+                this.fireCooldown = currentFireRate;
+                this.recoil = 6;
+
+                const isDual = this.dualLaserTimer > 0;
+                const gunTipDist = 30;
+
+                if (isDual) {
+                    // Tembakan Laser Ganda (2 sinar sejajar)
+                    const perpAngle = this.angle + Math.PI / 2;
+                    const offset = 8;
+                    for (let side of [-1, 1]) {
+                        const sx = this.x + Math.cos(this.angle) * gunTipDist + Math.cos(perpAngle) * offset * side;
+                        const sy = this.y + Math.sin(this.angle) * gunTipDist + Math.sin(perpAngle) * offset * side;
+                        lasers.push(new Laser(sx, sy, this.angle, true));
+                    }
+                } else {
+                    // Tembakan Laser Tunggal
+                    const sx = this.x + Math.cos(this.angle) * gunTipDist;
+                    const sy = this.y + Math.sin(this.angle) * gunTipDist;
+                    lasers.push(new Laser(sx, sy, this.angle, false));
+                }
+
+                // Kilatan cahaya di ujung laras senjata
+                const muzzleX = this.x + Math.cos(this.angle) * (gunTipDist + 4);
+                const muzzleY = this.y + Math.sin(this.angle) * (gunTipDist + 4);
+                for (let i = 0; i < 4; i++) {
+                    const spread = this.angle + (Math.random() - 0.5) * 0.8;
+                    particles.push(new Particle(
+                        muzzleX, muzzleY,
+                        Math.cos(spread) * 120, Math.sin(spread) * 120,
+                        isDual ? '#f472b6' : '#38bdf8',
+                        3, 0.12
+                    ));
+                }
+
+                audio.playLaser(isDual);
+            }
+
+            takeDamage(amount) {
+                if (this.invulnerableTimer > 0) return;
+
+                // Jika punya perisai energi (Shield), serap kerusakan
+                if (this.shieldTimer > 0) {
+                    this.invulnerableTimer = 0.4;
+                    floatingTexts.push(new FloatingText(this.x, this.y - 30, 'PERISAI AKTIF!', '#38bdf8'));
+                    return;
+                }
+
+                this.hp = Math.max(0, this.hp - amount);
+                this.invulnerableTimer = 0.75;
+                screenShake = 12;
+                audio.playPlayerHurt();
+
+                // Percikan merah saat terkena zombie
+                for (let i = 0; i < 12; i++) {
+                    const a = Math.random() * Math.PI * 2;
+                    particles.push(new Particle(
+                        this.x, this.y,
+                        Math.cos(a) * 140, Math.sin(a) * 140,
+                        '#fb7185', 4, 0.35
+                    ));
+                }
+
+                updateHUD();
+
+                if (this.hp <= 0) {
+                    triggerGameOver();
+                }
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                // Efek berkedip saat kebal sesaat setelah terkena serangan
+                if (this.invulnerableTimer > 0 && Math.floor(this.invulnerableTimer * 16) % 2 === 0) {
+                    ctx.globalAlpha = 0.55;
+                }
+
+                // Aura Perisai Pelindung (jika aktif)
+                if (this.shieldTimer > 0) {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.radius + 13 + Math.sin(Date.now() * 0.01) * 2, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.lineWidth = 3;
+                    ctx.shadowColor = '#38bdf8';
+                    ctx.shadowBlur = 15;
+                    ctx.stroke();
+                    ctx.fillStyle = 'rgba(56, 189, 248, 0.12)';
+                    ctx.fill();
+                    ctx.restore();
+                }
+
+                ctx.rotate(this.angle);
+
+                // 1. Animasi Kaki Berjalan (Bergerak maju-mundur bergantian)
+                const legSwing = this.isMoving ? Math.sin(this.walkTime) * 8 : 0;
+                ctx.fillStyle = '#1e293b';
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 1.5;
+
+                // Kaki Kiri
+                ctx.beginPath();
+                ctx.roundRect(-6 + legSwing, -15, 13, 7, 3.5);
+                ctx.fill();
+                ctx.stroke();
+
+                // Kaki Kanan
+                ctx.beginPath();
+                ctx.roundRect(-6 - legSwing, 8, 13, 7, 3.5);
+                ctx.fill();
+                ctx.stroke();
+
+                // 2. Jetpack di Punggung
+                ctx.fillStyle = '#334155';
+                ctx.beginPath();
+                ctx.roundRect(-21, -11, 8, 22, 3);
+                ctx.fill();
+                // Inti Energi Jetpack
+                ctx.fillStyle = '#38bdf8';
+                ctx.shadowColor = '#38bdf8';
+                ctx.shadowBlur = 10;
+                ctx.fillRect(-22, -7, 3, 5);
+                ctx.fillRect(-22, 2, 3, 5);
+                ctx.shadowBlur = 0;
+
+                // 3. Bahu & Armor Badan Space Ranger
+                const bodyBob = this.isMoving ? Math.abs(Math.sin(this.walkTime)) * 1.5 : 0;
+                ctx.fillStyle = '#0f172a';
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                ctx.ellipse(-2 + bodyBob, 0, 15, 19, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // Aksen Armor Dada Putih-Biru
+                ctx.fillStyle = '#e2e8f0';
+                ctx.beginPath();
+                ctx.ellipse(1 + bodyBob, 0, 10, 13, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // 4. Senjata Laser Sci-Fi di Tangan Kanan (dengan efek recoil saat menembak)
+                const gunX = 8 - this.recoil;
+                ctx.fillStyle = '#475569';
+                ctx.strokeStyle = '#94a3b8';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.roundRect(gunX, 5, 24, 7, 3);
+                ctx.fill();
+                ctx.stroke();
+
+                // Inti Bercahaya pada Senjata Laser
+                const laserColor = this.dualLaserTimer > 0 ? '#f472b6' : '#00f0ff';
+                ctx.fillStyle = laserColor;
+                ctx.shadowColor = laserColor;
+                ctx.shadowBlur = 12;
+                ctx.fillRect(gunX + 6, 7, 14, 3);
+                ctx.shadowBlur = 0;
+
+                // 5. Helm Futuristik & Visor Bercahaya
+                ctx.fillStyle = '#f8fafc';
+                ctx.strokeStyle = '#0284c7';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(2, 0, 12.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // Visor Kaca Biru Neon Menghadap Depan
+                ctx.fillStyle = '#0ea5e9';
+                ctx.shadowColor = '#38bdf8';
+                ctx.shadowBlur = 10;
+                ctx.beginPath();
+                ctx.ellipse(7, 0, 6.5, 9, 0, -Math.PI * 0.45, Math.PI * 0.45);
+                ctx.fill();
+
+                // Kilauan Visor
+                ctx.fillStyle = '#bae6fd';
+                ctx.beginPath();
+                ctx.ellipse(8.5, -3, 2.5, 3.5, 0.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                ctx.restore();
+            }
+        }
+
+        // ==========================================
+        // 5. KELAS PROYEKTIL LASER SCI-FI
+        // ==========================================
+        class Laser {
+            constructor(x, y, angle, isDual = false) {
+                this.x = x;
+                this.y = y;
+                this.angle = angle;
+                this.speed = 820;
+                this.vx = Math.cos(angle) * this.speed;
+                this.vy = Math.sin(angle) * this.speed;
+                this.length = isDual ? 28 : 24;
+                this.radius = isDual ? 5 : 4;
+                this.damage = isDual ? 28 : 25;
+                this.isDual = isDual;
+                this.color = isDual ? '#f472b6' : '#00f0ff';
+                this.coreColor = '#ffffff';
+                this.active = true;
+            }
+
+            update(dt) {
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+
+                // Hapus laser jika keluar layar
+                if (this.x < -50 || this.x > width + 50 || this.y < -50 || this.y > height + 50) {
+                    this.active = false;
+                }
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+
+                // Cahaya Luar Laser (Glow)
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 16;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.roundRect(-this.length / 2, -this.radius, this.length, this.radius * 2, this.radius);
+                ctx.fill();
+
+                // Inti Putih Terang di Tengah Sinar Laser
+                ctx.fillStyle = this.coreColor;
+                ctx.beginPath();
+                ctx.roundRect(-this.length / 2 + 2, -this.radius * 0.45, this.length - 4, this.radius * 0.9, 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
+        // ==========================================
+        // 6. KELAS MUSUH ZOMBIE LUAR ANGKASA
+        // ==========================================
+        class Zombie {
+            constructor(x, y, type, level, diffMult) {
+                this.x = x;
+                this.y = y;
+                this.type = type; // 'normal', 'fast', 'tank'
+                this.wobblePhase = Math.random() * Math.PI * 2;
+                this.hitFlash = 0;
+
+                // Skala kekuatan bertahap sesuai level
+                const levelScale = 1 + (level - 1) * 0.12;
+
+                if (type === 'fast') {
+                    // Zombie Cepat (Ungu Neon, Lincah)
+                    this.radius = 18;
+                    this.speed = (145 + level * 4) * diffMult.speedMult;
+                    this.maxHp = Math.round(35 * levelScale * diffMult.hpMult);
+                    this.skinColor = '#c084fc';
+                    this.armorColor = '#581c87';
+                    this.eyeColor = '#fde047';
+                    this.scoreValue = 150;
+                    this.damage = 12;
+                } else if (type === 'tank') {
+                    // Zombie Raksasa / Tank (Oranye-Hijau Besar, Kuat)
+                    this.radius = 31;
+                    this.speed = (62 + level * 2) * diffMult.speedMult;
+                    this.maxHp = Math.round(140 * levelScale * diffMult.hpMult);
+                    this.skinColor = '#4ade80';
+                    this.armorColor = '#9a3412';
+                    this.eyeColor = '#ef4444';
+                    this.scoreValue = 300;
+                    this.damage = 25;
+                } else {
+                    // Zombie Biasa (Hijau Neon Kartun Sci-Fi)
+                    this.radius = 21;
+                    this.speed = (92 + level * 3) * diffMult.speedMult;
+                    this.maxHp = Math.round(50 * levelScale * diffMult.hpMult);
+                    this.skinColor = '#86efac';
+                    this.armorColor = '#1e3a8a';
+                    this.eyeColor = '#f43f5e';
+                    this.scoreValue = 100;
+                    this.damage = 15;
+                }
+
+                this.hp = this.maxHp;
+                this.angle = 0;
+            }
+
+            update(dt, player) {
+                if (this.hitFlash > 0) this.hitFlash -= dt;
+
+                // Arah mengejar player dengan sedikit gerakan terhuyung-huyung khas zombie
+                const targetAngle = Math.atan2(player.y - this.y, player.x - this.x);
+                this.wobblePhase += dt * (this.type === 'fast' ? 9 : 5.5);
+                const wobbleOffset = Math.sin(this.wobblePhase) * 0.18;
+
+                this.angle = targetAngle + wobbleOffset;
+                this.x += Math.cos(this.angle) * this.speed * dt;
+                this.y += Math.sin(this.angle) * this.speed * dt;
+            }
+
+            takeDamage(dmg) {
+                this.hp -= dmg;
+                this.hitFlash = 0.1;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                // Bar HP di atas kepala zombie (jika HP berkurang atau tipe Tank)
+                if (this.hp < this.maxHp || this.type === 'tank') {
+                    const barW = this.radius * 2;
+                    const barH = 5;
+                    const hpRatio = Math.max(0, this.hp / this.maxHp);
+
+                    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+                    ctx.beginPath();
+                    ctx.roundRect(-barW / 2, -this.radius - 14, barW, barH, 2.5);
+                    ctx.fill();
+
+                    ctx.fillStyle = this.type === 'tank' ? '#fb923c' : '#4ade80';
+                    ctx.beginPath();
+                    ctx.roundRect(-barW / 2, -this.radius - 14, barW * hpRatio, barH, 2.5);
+                    ctx.fill();
+                }
+
+                ctx.rotate(this.angle);
+
+                // Efek kilatan putih saat terkena laser
+                const fillSkin = this.hitFlash > 0 ? '#ffffff' : this.skinColor;
+                const armSwing = Math.sin(this.wobblePhase) * 4;
+
+                // 1. Lengan Zombie Terulur ke Depan (Animasi bergoyang)
+                ctx.fillStyle = fillSkin;
+                ctx.strokeStyle = '#064e3b';
+                ctx.lineWidth = 2;
+
+                // Lengan Kiri
+                ctx.beginPath();
+                ctx.roundRect(4, -this.radius * 0.85 + armSwing * 0.5, this.radius * 0.95, 7, 3.5);
+                ctx.fill();
+                ctx.stroke();
+
+                // Lengan Kanan
+                ctx.beginPath();
+                ctx.roundRect(4, this.radius * 0.85 - 7 - armSwing * 0.5, this.radius * 0.95, 7, 3.5);
+                ctx.fill();
+                ctx.stroke();
+
+                // 2. Badan / Baju Luar Angkasa Zombie yang Sobek
+                ctx.fillStyle = this.hitFlash > 0 ? '#e2e8f0' : this.armorColor;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // 3. Kepala Zombie Kartun
+                ctx.fillStyle = fillSkin;
+                ctx.beginPath();
+                ctx.arc(3, 0, this.radius * 0.72, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Detail Lucu/Kartun: Antena kecil untuk zombie cepat atau tanduk helm untuk tank
+                if (this.type === 'fast') {
+                    ctx.strokeStyle = '#e879f9';
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(-10, -8);
+                    ctx.stroke();
+                    ctx.fillStyle = '#fde047';
+                    ctx.beginPath();
+                    ctx.arc(-10, -8, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (this.type === 'tank') {
+                    ctx.fillStyle = '#475569';
+                    ctx.fillRect(-6, -this.radius * 0.8, 12, 5);
+                    ctx.fillRect(-6, this.radius * 0.8 - 5, 12, 5);
+                }
+
+                // 4. Mata Menyala Sci-Fi
+                ctx.fillStyle = this.eyeColor;
+                ctx.shadowColor = this.eyeColor;
+                ctx.shadowBlur = 8;
+                const eyeOffset = this.radius * 0.32;
+                const eyeForward = this.radius * 0.35;
+                ctx.beginPath();
+                ctx.arc(eyeForward, -eyeOffset, this.type === 'tank' ? 3.8 : 2.8, 0, Math.PI * 2);
+                ctx.arc(eyeForward, eyeOffset, this.type === 'tank' ? 3.8 : 2.8, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                ctx.restore();
+            }
+        }
+
+        // ==========================================
+        // 7. KELAS POWER-UP, PARTIKEL & TEKS MELAYANG
+        // ==========================================
+        class PowerUp {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.radius = 16;
+                this.life = 11; // Hilang setelah 11 detik jika tidak diambil
+                this.pulse = 0;
+
+                const rand = Math.random();
+                if (rand < 0.4) {
+                    this.type = 'heal';
+                    this.label = '+ENERGI';
+                    this.icon = '❤️';
+                    this.color = '#fb7185';
+                } else if (rand < 0.75) {
+                    this.type = 'dual';
+                    this.label = 'LASER GANDA';
+                    this.icon = '⚡';
+                    this.color = '#f472b6';
+                } else {
+                    this.type = 'shield';
+                    this.label = 'PERISAI';
+                    this.icon = '🛡️';
+                    this.color = '#38bdf8';
+                }
+            }
+
+            update(dt) {
+                this.life -= dt;
+                this.pulse += dt * 5;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                const scale = 1 + Math.sin(this.pulse) * 0.12;
+                ctx.scale(scale, scale);
+
+                // Berkedip jika hampir habis waktunya
+                if (this.life < 3 && Math.floor(this.life * 8) % 2 === 0) {
+                    ctx.globalAlpha = 0.4;
+                }
+
+                // Lingkaran Cahaya Power-Up
+                ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = 3;
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 15;
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // Ikon Emoji di Tengah
+                ctx.font = '16px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.icon, 0, 1);
+
+                ctx.restore();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, vx, vy, color, size, life) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.color = color;
+                this.size = size;
+                this.maxLife = life;
+                this.life = life;
+            }
+
+            update(dt) {
+                this.x += this.vx * dt;
+                this.y += this.vy * dt;
+                this.vx *= 0.94;
+                this.vy *= 0.94;
+                this.life -= dt;
+            }
+
+            draw(ctx) {
+                const alpha = Math.max(0, this.life / this.maxLife);
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.fillStyle = this.color;
+                ctx.shadowColor = this.color;
+                ctx.shadowBlur = 8;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size * alpha, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class FloatingText {
+            constructor(x, y, text, color) {
+                this.x = x;
+                this.y = y;
+                this.text = text;
+                this.color = color;
+                this.life = 0.9;
+                this.maxLife = 0.9;
+            }
+
+            update(dt) {
+                this.y -= 35 * dt;
+                this.life -= dt;
+            }
+
+            draw(ctx) {
+                const alpha = Math.max(0, this.life / this.maxLife);
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.font = 'bold 13px "Orbitron", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = this.color;
+                ctx.shadowColor = '#000000';
+                ctx.shadowBlur = 4;
+                ctx.fillText(this.text, this.x, this.y);
+                ctx.restore();
+            }
+        }
+
+        // ==========================================
+        // 8. LOGIKA LEVEL, SPAWN ZOMBIE & GAMEPLAY
+        // ==========================================
+        function startGame() {
+            audio.init();
+            const diff = DIFFICULTIES[selectedDifficulty];
+
+            score = 0;
+            totalKills = 0;
+            currentLevel = 1;
+            lasers = [];
+            zombies = [];
+            particles = [];
+            powerups = [];
+            floatingTexts = [];
+
+            player = new Player(diff.playerHp);
+            setupLevel(currentLevel);
+
+            gameState = 'PLAYING';
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            hudContainer.classList.remove('hidden');
+
+            updateHUD();
+            showLevelBanner(1, 'Basmi semua zombie di sektor ini!');
+        }
+
+        function setupLevel(level) {
+            const diff = DIFFICULTIES[selectedDifficulty];
+            // Jumlah zombie bertambah secara bertahap tiap level
+            const baseCount = 6 + (level - 1) * 4;
+            zombiesToSpawnInLevel = Math.round(baseCount * diff.spawnMult);
+            zombiesRemainingInLevel = zombiesToSpawnInLevel;
+            spawnTimer = 0.5;
+            spawnInterval = Math.max(0.45, 1.45 - level * 0.09);
+        }
+
+        function spawnZombie() {
+            const diff = DIFFICULTIES[selectedDifficulty];
+            // Muncul dari luar tepi layar secara acak
+            const margin = 45;
+            let x, y;
+            const side = Math.floor(Math.random() * 4);
+            if (side === 0) { x = Math.random() * width; y = -margin; }
+            else if (side === 1) { x = width + margin; y = Math.random() * height; }
+            else if (side === 2) { x = Math.random() * width; y = height + margin; }
+            else { x = -margin; y = Math.random() * height; }
+
+            // Tentukan tipe zombie berdasarkan level saat ini
+            let type = 'normal';
+            const roll = Math.random();
+            if (currentLevel >= 3 && roll < 0.22) {
+                type = 'tank';
+            } else if (currentLevel >= 2 && roll < 0.52) {
+                type = 'fast';
+            }
+
+            zombies.push(new Zombie(x, y, type, currentLevel, diff));
+        }
+
+        function showLevelBanner(lvl, subtitle) {
+            levelBannerText.textContent = `LEVEL ${lvl}`;
+            levelBannerSub.textContent = subtitle;
+            levelBanner.classList.remove('hidden', 'animate-level-banner');
+            void levelBanner.offsetWidth; // Reset animasi CSS
+            levelBanner.classList.add('animate-level-banner');
+
+            setTimeout(() => {
+                levelBanner.classList.add('hidden');
+            }, 2400);
+        }
+
+        function triggerGameOver() {
+            gameState = 'GAMEOVER';
+            audio.playGameOver();
+
+            document.getElementById('finalScore').textContent = score.toLocaleString('id-ID');
+            document.getElementById('finalLevel').textContent = currentLevel;
+            document.getElementById('finalKills').textContent = totalKills;
+
+            hudContainer.classList.add('hidden');
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        function updateHUD() {
+            if (!player) return;
+            const hpPct = Math.max(0, (player.hp / player.maxHp) * 100);
+            healthBarFill.style.width = `${hpPct}%`;
+            healthText.textContent = Math.ceil(player.hp);
+
+            levelDisplay.textContent = currentLevel;
+            zombieCountDisplay.textContent = zombiesRemainingInLevel;
+            scoreDisplay.textContent = score.toLocaleString('id-ID');
+
+            // Tampilkan badge power-up yang sedang aktif
+            let badgesHTML = '';
+            if (player.dualLaserTimer > 0) {
+                badgesHTML += `<div class="glass-panel rounded-full px-3 py-1 text-[11px] font-bold text-pink-300 border-pink-400/50">⚡ Laser Ganda (${Math.ceil(player.dualLaserTimer)}d)</div>`;
+            }
+            if (player.shieldTimer > 0) {
+                badgesHTML += `<div class="glass-panel rounded-full px-3 py-1 text-[11px] font-bold text-sky-300 border-sky-400/50">🛡️ Perisai (${Math.ceil(player.shieldTimer)}d)</div>`;
+            }
+            activePowerupsEl.innerHTML = badgesHTML;
+        }
+
+        // ==========================================
+        // 9. UPDATE & RENDER LOOP UTAMA
+        // ==========================================
+        function update(dt) {
+            // Update Bintang Parallax (selalu berjalan bahkan di menu)
+            stars.forEach(s => {
+                s.y += s.speed * dt;
+                s.phase += s.twinkleSpeed * dt;
+                if (s.y > height) {
+                    s.y = 0;
+                    s.x = Math.random() * width;
+                }
+            });
+
+            if (screenShake > 0) {
+                screenShake = Math.max(0, screenShake - dt * 35);
+            }
+
+            if (gameState !== 'PLAYING') return;
+
+            // Update Player
+            player.update(dt);
+
+            // Spawn Zombie Bertahap
+            if (zombiesToSpawnInLevel > 0) {
+                spawnTimer -= dt;
+                if (spawnTimer <= 0) {
+                    spawnZombie();
+                    zombiesToSpawnInLevel--;
+                    spawnTimer = spawnInterval;
+                }
+            }
+
+            // Cek apakah semua zombie di level ini sudah musnah -> Naik Level!
+            if (zombiesToSpawnInLevel === 0 && zombies.length === 0 && levelTransitionTimer <= 0) {
+                levelTransitionTimer = 1.2;
+                audio.playLevelUp();
+                currentLevel++;
+                // Pulihkan sedikit energi player setiap naik level
+                player.hp = Math.min(player.maxHp, player.hp + 15);
+                setupLevel(currentLevel);
+                updateHUD();
+
+                let subMsg = 'Gelombang zombie baru tiba!';
+                if (currentLevel === 2) subMsg = 'Waspada: Zombie Ungu Cepat muncul!';
+                if (currentLevel === 3) subMsg = 'Peringatan: Zombie Raksasa Tank terdeteksi!';
+                showLevelBanner(currentLevel, subMsg);
+            }
+            if (levelTransitionTimer > 0) levelTransitionTimer -= dt;
+
+            // Update Laser & Cek Tabrakan dengan Zombie
+            for (let i = lasers.length - 1; i >= 0; i--) {
+                const l = lasers[i];
+                l.update(dt);
+                if (!l.active) {
+                    lasers.splice(i, 1);
+                    continue;
+                }
+
+                for (let j = zombies.length - 1; j >= 0; j--) {
+                    const z = zombies[j];
+                    const dist = Math.hypot(l.x - z.x, l.y - z.y);
+                    if (dist < z.radius + l.radius) {
+                        // Laser mengenai zombie
+                        z.takeDamage(l.damage);
+                        l.active = false;
+
+                        // Percikan sinar laser
+                        for (let p = 0; p < 6; p++) {
+                            const a = Math.random() * Math.PI * 2;
+                            particles.push(new Particle(
+                                l.x, l.y,
+                                Math.cos(a) * (80 + Math.random() * 90),
+                                Math.sin(a) * (80 + Math.random() * 90),
+                                l.color, 3, 0.22
+                            ));
+                        }
+
+                        if (z.hp <= 0) {
+                            // Zombie Musnah!
+                            audio.playZombieDestroy();
+                            score += z.scoreValue;
+                            totalKills++;
+                            zombiesRemainingInLevel = Math.max(0, zombiesRemainingInLevel - 1);
+                            screenShake = Math.max(screenShake, z.type === 'tank' ? 8 : 4);
+
+                            floatingTexts.push(new FloatingText(z.x, z.y - 10, `+${z.scoreValue}`, '#fde047'));
+
+                            // Ledakan partikel hijau/ungu neon
+                            const burstCount = z.type === 'tank' ? 22 : 14;
+                            for (let p = 0; p < burstCount; p++) {
+                                const a = Math.random() * Math.PI * 2;
+                                particles.push(new Particle(
+                                    z.x, z.y,
+                                    Math.cos(a) * (60 + Math.random() * 140),
+                                    Math.sin(a) * (60 + Math.random() * 140),
+                                    z.skinColor, Math.random() * 4.5 + 2, 0.42
+                                ));
+                            }
+
+                            // Peluang menjatuhkan Power-Up (22%)
+                            if (Math.random() < 0.22) {
+                                powerups.push(new PowerUp(z.x, z.y));
+                            }
+
+                            zombies.splice(j, 1);
+                        } else {
+                            audio.playHit();
+                        }
+
+                        updateHUD();
+                        break;
+                    }
+                }
+            }
+
+            // Update Zombie & Cek Tabrakan antar Zombie serta dengan Player
+            for (let i = 0; i < zombies.length; i++) {
+                const z = zombies[i];
+                z.update(dt, player);
+
+                // Dorong sedikit agar zombie tidak menumpuk di satu titik yang sama persis
+                for (let j = i + 1; j < zombies.length; j++) {
+                    const z2 = zombies[j];
+                    const dx = z2.x - z.x;
+                    const dy = z2.y - z.y;
+                    const dist = Math.hypot(dx, dy);
+                    const minDist = z.radius + z2.radius;
+                    if (dist > 0 && dist < minDist) {
+                        const push = (minDist - dist) * 0.5;
+                        const nx = dx / dist;
+                        const ny = dy / dist;
+                        z.x -= nx * push;
+                        z.y -= ny * push;
+                        z2.x += nx * push;
+                        z2.y += ny * push;
+                    }
+                }
+
+                // Cek tabrakan zombie dengan Player
+                const distToPlayer = Math.hypot(z.x - player.x, z.y - player.y);
+                if (distToPlayer < z.radius + player.radius - 4) {
+                    player.takeDamage(z.damage);
+                    // Dorong zombie mundur sedikit setelah menggigit
+                    const pushAngle = Math.atan2(z.y - player.y, z.x - player.x);
+                    z.x += Math.cos(pushAngle) * 28;
+                    z.y += Math.sin(pushAngle) * 28;
+                }
+            }
+
+            // Update Power-Up & Cek Pengambilan oleh Player
+            for (let i = powerups.length - 1; i >= 0; i--) {
+                const pu = powerups[i];
+                pu.update(dt);
+                if (pu.life <= 0) {
+                    powerups.splice(i, 1);
+                    continue;
+                }
+
+                const dist = Math.hypot(pu.x - player.x, pu.y - player.y);
+                if (dist < pu.radius + player.radius + 6) {
+                    audio.playPowerup();
+                    if (pu.type === 'heal') {
+                        player.hp = Math.min(player.maxHp, player.hp + 30);
+                        floatingTexts.push(new FloatingText(player.x, player.y - 25, '+30 ENERGI', '#fb7185'));
+                    } else if (pu.type === 'dual') {
+                        player.dualLaserTimer = 9;
+                        floatingTexts.push(new FloatingText(player.x, player.y - 25, 'LASER GANDA!', '#f472b6'));
+                    } else if (pu.type === 'shield') {
+                        player.shieldTimer = 8;
+                        floatingTexts.push(new FloatingText(player.x, player.y - 25, 'PERISAI ENERGI!', '#38bdf8'));
+                    }
+                    updateHUD();
+                    powerups.splice(i, 1);
+                }
+            }
+
+            // Update Partikel & Teks Melayang
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update(dt);
+                if (particles[i].life <= 0) particles.splice(i, 1);
+            }
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                floatingTexts[i].update(dt);
+                if (floatingTexts[i].life <= 0) floatingTexts.splice(i, 1);
+            }
+
+            // Perbarui timer power-up di HUD secara berkala
+            if (player.dualLaserTimer > 0 || player.shieldTimer > 0) {
+                updateHUD();
+            }
+        }
+
+        function draw() {
+            ctx.save();
+
+            // Efek getar layar (Screen Shake)
+            if (screenShake > 0) {
+                const sx = (Math.random() - 0.5) * screenShake;
+                const sy = (Math.random() - 0.5) * screenShake;
+                ctx.translate(sx, sy);
+            }
+
+            // 1. Latar Belakang Luar Angkasa Gelap
+            ctx.fillStyle = '#050814';
+            ctx.fillRect(0, 0, width, height);
+
+            // Nebula Luar Angkasa Lembut
+            nebulae.forEach(n => {
+                const grad = ctx.createRadialGradient(n.x, n.y, 10, n.x, n.y, n.r);
+                grad.addColorStop(0, n.color);
+                grad.addColorStop(1, 'transparent');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, width, height);
+            });
+
+            // Grid Lantai Stasiun Luar Angkasa Samar
+            ctx.strokeStyle = 'rgba(56, 189, 248, 0.04)';
+            ctx.lineWidth = 1;
+            const gridSize = 64;
+            for (let gx = 0; gx < width; gx += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(gx, 0);
+                ctx.lineTo(gx, height);
+                ctx.stroke();
+            }
+            for (let gy = 0; gy < height; gy += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, gy);
+                ctx.lineTo(width, gy);
+                ctx.stroke();
+            }
+
+            // Bintang Berkelip (Parallax)
+            stars.forEach(s => {
+                const twinkle = 0.5 + 0.5 * Math.sin(s.phase);
+                ctx.globalAlpha = s.alpha * twinkle;
+                ctx.fillStyle = s.color;
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+
+            if (gameState === 'PLAYING' || gameState === 'GAMEOVER') {
+                // Gambar Power-Ups
+                powerups.forEach(pu => pu.draw(ctx));
+
+                // Gambar Partikel Bawah
+                particles.forEach(p => p.draw(ctx));
+
+                // Gambar Tembakan Laser
+                lasers.forEach(l => l.draw(ctx));
+
+                // Gambar Zombie
+                zombies.forEach(z => z.draw(ctx));
+
+                // Gambar Player
+                if (player && player.hp > 0) {
+                    player.draw(ctx);
+                }
+
+                // Gambar Teks Melayang
+                floatingTexts.forEach(ft => ft.draw(ctx));
+
+                // Gambar Virtual Joystick jika sedang menyentuh layar kiri
+                if (touchControls.moveTouchId !== null) {
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(touchControls.moveOrigin.x, touchControls.moveOrigin.y, 46, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                    ctx.fillStyle = 'rgba(56, 189, 248, 0.1)';
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.arc(touchControls.moveCurrent.x, touchControls.moveCurrent.y, 20, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(56, 189, 248, 0.65)';
+                    ctx.fill();
+                    ctx.restore();
+                }
+            }
+
+            ctx.restore();
+        }
+
+        function gameLoop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const dt = Math.min(0.05, (timestamp - lastTime) / 1000);
+            lastTime = timestamp;
+
+            update(dt);
+            draw();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // ==========================================
+        // 10. EVENT LISTENERS (KEYBOARD, MOUSE, TOUCH, UI)
+        // ==========================================
+        window.addEventListener('keydown', e => {
+            keys[e.code] = true;
+            if (e.code === 'Space' && gameState === 'PLAYING') {
+                e.preventDefault();
+            }
+        });
+
+        window.addEventListener('keyup', e => {
+            keys[e.code] = false;
+        });
+
+        canvas.addEventListener('mousemove', e => {
+            mouse.x = e.clientX;
+            mouse.y = e.clientY;
+        });
+
+        canvas.addEventListener('mousedown', e => {
+            if (e.button === 0 && gameState === 'PLAYING') {
+                audio.init();
+                mouse.isDown = true;
+                mouse.x = e.clientX;
+                mouse.y = e.clientY;
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            mouse.isDown = false;
+        });
+
+        // Kontrol Layar Sentuh (Multi-touch: Kiri untuk Gerak, Kanan untuk Bidik & Tembak)
+        canvas.addEventListener('touchstart', e => {
+            if (gameState !== 'PLAYING') return;
+            e.preventDefault();
+            audio.init();
+
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const t = e.changedTouches[i];
+                if (t.clientX < width * 0.45 && touchControls.moveTouchId === null) {
+                    touchControls.moveTouchId = t.identifier;
+                    touchControls.moveOrigin = { x: t.clientX, y: t.clientY };
+                    touchControls.moveCurrent = { x: t.clientX, y: t.clientY };
+                    touchControls.moveVector = { x: 0, y: 0 };
+                } else if (touchControls.shootTouchId === null) {
+                    touchControls.shootTouchId = t.identifier;
+                    touchControls.isShooting = true;
+                    mouse.x = t.clientX;
+                    mouse.y = t.clientY;
+                }
+            }
+        }, { passive: false });
+
+        canvas.addEventListener('touchmove', e => {
+            if (gameState !== 'PLAYING') return;
+            e.preventDefault();
+
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const t = e.changedTouches[i];
+                if (t.identifier === touchControls.moveTouchId) {
+                    const maxDist = 46;
+                    const dx = t.clientX - touchControls.moveOrigin.x;
+                    const dy = t.clientY - touchControls.moveOrigin.y;
+                    const dist = Math.hypot(dx, dy);
+                    const clampedDist = Math.min(maxDist, dist);
+                    const angle = Math.atan2(dy, dx);
+
+                    touchControls.moveCurrent = {
+                        x: touchControls.moveOrigin.x + Math.cos(angle) * clampedDist,
+                        y: touchControls.moveOrigin.y + Math.sin(angle) * clampedDist
+                    };
+                    touchControls.moveVector = {
+                        x: (Math.cos(angle) * clampedDist) / maxDist,
+                        y: (Math.sin(angle) * clampedDist) / maxDist
+                    };
+                } else if (t.identifier === touchControls.shootTouchId) {
+                    mouse.x = t.clientX;
+                    mouse.y = t.clientY;
+                }
+            }
+        }, { passive: false });
+
+        function handleTouchEnd(e) {
+            for (let i = 0; i < e.changedTouches.length; i++) {
+                const t = e.changedTouches[i];
+                if (t.identifier === touchControls.moveTouchId) {
+                    touchControls.moveTouchId = null;
+                    touchControls.moveVector = { x: 0, y: 0 };
+                } else if (t.identifier === touchControls.shootTouchId) {
+                    touchControls.shootTouchId = null;
+                    touchControls.isShooting = false;
+                }
+            }
+        }
+        canvas.addEventListener('touchend', handleTouchEnd);
+        canvas.addEventListener('touchcancel', handleTouchEnd);
+
+        // Tombol Pilihan Kesulitan
+        document.querySelectorAll('.diff-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.diff-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedDifficulty = btn.dataset.diff;
+            });
+        });
+
+        // Tombol Mulai & Main Lagi
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('restartBtn').addEventListener('click', startGame);
+
+        // Tombol Mute / Unmute Suara
+        document.getElementById('muteBtn').addEventListener('click', () => {
+            audio.init();
+            const isMuted = audio.toggleMute();
+            document.getElementById('soundOnIcon').classList.toggle('hidden', isMuted);
+            document.getElementById('soundOffIcon').classList.toggle('hidden', !isMuted);
+        });
+
+        // Mulai Inisialisasi Saat Halaman Siap
+        window.onload = function () {
+            resizeCanvas();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
